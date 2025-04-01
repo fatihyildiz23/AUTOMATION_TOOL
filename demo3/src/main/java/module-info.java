@@ -11,7 +11,8 @@ module com.example.demo3 {
     requires java.prefs;
     requires dev.failsafe.core;
     requires org.slf4j;
-    
+    requires com.google.gson;
+
     opens com.example.demo3 to javafx.fxml;
     exports com.example.demo3;
 }

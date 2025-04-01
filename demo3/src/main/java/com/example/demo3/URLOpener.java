@@ -46,21 +46,8 @@ public class URLOpener extends JFrame {
     private List<TestStep> testSteps = new ArrayList<>();
     private JButton editStepButton;
     private int selectedRowIndex = -1;
-
-    // Test adımı için iç sınıf
-    private class TestStep {
-        String locatorType;
-        String locator;
-        String action;
-        String text;
-
-        TestStep(String locatorType, String locator, String action, String text) {
-            this.locatorType = locatorType;
-            this.locator = locator;
-            this.action = action;
-            this.text = text;
-        }
-    }
+    private JButton saveScenarioButton;
+    private JButton loadScenariosButton;
 
     public URLOpener() {
         setTitle("Selenium Otomasyon Aracı");
@@ -268,10 +255,22 @@ public class URLOpener extends JFrame {
         buttonPanel.add(clearStepsButton);
         buttonPanel.add(moveButtonsPanel);
 
+        // Senaryo yönetimi butonları
+        JPanel scenarioPanel = new JPanel(new FlowLayout());
+        saveScenarioButton = new JButton("Senaryoyu Kaydet");
+        loadScenariosButton = new JButton("Senaryoları Yükle");
+
+        saveScenarioButton.addActionListener(e -> saveScenario());
+        loadScenariosButton.addActionListener(e -> loadScenarios());
+
+        scenarioPanel.add(saveScenarioButton);
+        scenarioPanel.add(loadScenariosButton);
+
         // Panelleri yerleştirme
         centerPanel.add(operationsPanel, BorderLayout.NORTH);
         centerPanel.add(scrollPane, BorderLayout.CENTER);
         centerPanel.add(buttonPanel, BorderLayout.SOUTH);
+        centerPanel.add(scenarioPanel, BorderLayout.EAST);
 
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
@@ -530,6 +529,101 @@ public class URLOpener extends JFrame {
         // Tabloyu güncelle
         tableModel.moveRow(selectedRow, selectedRow, newPosition);
         testStepsTable.setRowSelectionInterval(newPosition, newPosition);
+    }
+
+    private void saveScenario() {
+        String name = JOptionPane.showInputDialog(this, "Senaryo adını girin:", "Senaryo Kaydet", JOptionPane.QUESTION_MESSAGE);
+        if (name != null && !name.trim().isEmpty()) {
+            String url = urlInput.getText().trim();
+            if (url.isEmpty()) {
+                showError("URL boş olamaz!");
+                return;
+            }
+            if (testSteps.isEmpty()) {
+                showError("Kaydedilecek test adımı yok!");
+                return;
+            }
+            ScenarioManager.saveScenario(name, url, testSteps);
+            JOptionPane.showMessageDialog(this, "Senaryo başarıyla kaydedildi!", "Başarılı", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void loadScenarios() {
+        List<ScenarioManager.Scenario> scenarios = ScenarioManager.loadAllScenarios();
+        if (scenarios.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Kayıtlı senaryo bulunmamaktadır.", "Bilgi", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        JDialog dialog = new JDialog(this, "Senaryoları Yükle", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(400, 300);
+
+        // Senaryo listesi
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        for (ScenarioManager.Scenario scenario : scenarios) {
+            listModel.addElement(scenario.getName());
+        }
+        JList<String> scenarioList = new JList<>(listModel);
+        JScrollPane scrollPane = new JScrollPane(scenarioList);
+
+        // Butonlar
+        JPanel buttonPanel = new JPanel();
+        JButton loadButton = new JButton("Yükle");
+        JButton deleteButton = new JButton("Sil");
+        JButton cancelButton = new JButton("İptal");
+
+        loadButton.addActionListener(e -> {
+            int selectedIndex = scenarioList.getSelectedIndex();
+            if (selectedIndex != -1) {
+                ScenarioManager.Scenario selectedScenario = scenarios.get(selectedIndex);
+                loadScenario(selectedScenario);
+                dialog.dispose();
+            }
+        });
+
+        deleteButton.addActionListener(e -> {
+            int selectedIndex = scenarioList.getSelectedIndex();
+            if (selectedIndex != -1) {
+                String scenarioName = scenarios.get(selectedIndex).getName();
+                int confirm = JOptionPane.showConfirmDialog(dialog, 
+                    "Bu senaryoyu silmek istediğinizden emin misiniz?", 
+                    "Senaryo Sil", 
+                    JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    ScenarioManager.deleteScenario(scenarioName);
+                    listModel.remove(selectedIndex);
+                    scenarios.remove(selectedIndex);
+                }
+            }
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(loadButton);
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(cancelButton);
+
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void loadScenario(ScenarioManager.Scenario scenario) {
+        urlInput.setText(scenario.getUrl());
+        clearSteps();
+        testSteps.addAll(scenario.getSteps());
+        
+        // Tabloyu güncelle
+        for (TestStep step : scenario.getSteps()) {
+            tableModel.addRow(new Object[]{
+                step.locatorType,
+                step.locator,
+                step.action,
+                step.text
+            });
+        }
     }
 
     public static void main(String[] args) {
