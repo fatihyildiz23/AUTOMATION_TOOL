@@ -109,6 +109,27 @@ public class URLOpener extends JFrame {
         actionSelector = new JComboBox<>(new String[]{"Tıkla", "Yazdır", "Bekle", "Temizle", "Metin Al"});
         operationsPanel.add(actionSelector, gbc);
 
+        // Add action listener for actionSelector
+        actionSelector.addActionListener(e -> {
+            String selectedAction = (String) actionSelector.getSelectedItem();
+            switch (selectedAction) {
+                case "Tıkla":
+                    textInput.setEnabled(false);
+                    locatorInput.setEnabled(true);
+                    break;
+                case "Bekle":
+                    locatorInput.setEnabled(false);
+                    textInput.setEnabled(true);
+                    break;
+                case "Yazdır":
+                case "Temizle":
+                case "Metin Al":
+                    textInput.setEnabled(true);
+                    locatorInput.setEnabled(true);
+                    break;
+            }
+        });
+
         // Text Input
         gbc.gridx = 0; gbc.gridy = 3;
         operationsPanel.add(new JLabel("Text:"), gbc);
